@@ -1,6 +1,7 @@
 plugins {
     id 'application'
     id 'com.github.johnrengelman.shadow' version "8.1.1"
+    id 'org.jetbrains.kotlin.jvm' version '1.9.20-RC2'
 }
 
 description "Management of larger verification with KeY."
@@ -10,6 +11,8 @@ dependencies {
     implementation project(':key.ui')
 
     implementation group: 'org.antlr', name: 'ST4', version: '4.3.4'
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation "com.github.ajalt.clikt:clikt:4.2.1"
 }
 
 application {
@@ -31,4 +34,10 @@ run {
 shadowJar {
     archiveClassifier = "exe"
     archiveBaseName = "keyext.proofmanagement"
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }
