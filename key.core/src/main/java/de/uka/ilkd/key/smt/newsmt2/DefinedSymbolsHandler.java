@@ -98,8 +98,7 @@ public class DefinedSymbolsHandler implements SMTHandler {
     private boolean enabled;
 
     @Override
-    public void init(MasterHandler masterHandler, Services services, Properties handlerSnippets,
-            String[] handlerOptions) throws IOException {
+    public void init(MasterHandler masterHandler, Services services, Properties handlerSnippets) throws IOException {
         this.services = services;
         this.snippets = handlerSnippets;
 

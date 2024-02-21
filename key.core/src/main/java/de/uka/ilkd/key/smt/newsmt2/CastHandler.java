@@ -24,8 +24,7 @@ public class CastHandler implements SMTHandler {
     private SortDependingFunction anyCast;
 
     @Override
-    public void init(MasterHandler masterHandler, Services services, Properties handlerSnippets,
-            String[] handlerOptions) throws IOException {
+    public void init(MasterHandler masterHandler, Services services, Properties handlerSnippets) throws IOException {
         this.anyCast = Sort.ANY.getCastSymbol(services);
         masterHandler.addDeclarationsAndAxioms(handlerSnippets);
     }
