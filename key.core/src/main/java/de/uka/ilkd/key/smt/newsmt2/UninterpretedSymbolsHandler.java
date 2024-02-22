@@ -70,7 +70,7 @@ public class UninterpretedSymbolsHandler implements SMTHandler {
         }
 
         List<SExpr> children = trans.translate(term.subs(), Type.UNIVERSE);
-        SExpr.Type exprType = (term.sort() == Sort.FORMULA) ? BOOL : (term.sort() == integerLDT.targetSort() ? IntegerOpHandler.INT : UNIVERSE);
+        SExpr.Type exprType = (term.sort() == Sort.FORMULA) ? BOOL : (term.sort() == integerLDT.targetSort() ? Type.INT : UNIVERSE);
         return new SExpr(name, exprType, children);
     }
 

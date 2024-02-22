@@ -42,7 +42,9 @@ public class SExprs {
     /**
      * The constant "0" of type Int
      */
-    public static final SExpr ZERO = new SExpr("0", IntegerOpHandler.INT);
+    public static final SExpr ZERO = new SExpr("0", Type.INT);
+
+
 
     /**
      * Produce a conjunction of SExprs.
@@ -316,18 +318,18 @@ public class SExprs {
     }
 
     public static SExpr greaterEqual(SExpr a, SExpr b) throws SMTTranslationException {
-        return new SExpr(">=", Type.BOOL, SExprs.coerce(a, IntegerOpHandler.INT),
-            SExprs.coerce(b, IntegerOpHandler.INT));
+        return new SExpr(">=", Type.BOOL, SExprs.coerce(a, Type.INT),
+            SExprs.coerce(b, Type.INT));
     }
 
     public static SExpr lessEqual(SExpr a, SExpr b) throws SMTTranslationException {
-        return new SExpr("<=", Type.BOOL, SExprs.coerce(a, IntegerOpHandler.INT),
-            SExprs.coerce(b, IntegerOpHandler.INT));
+        return new SExpr("<=", Type.BOOL, SExprs.coerce(a, Type.INT),
+            SExprs.coerce(b, Type.INT));
     }
 
     public static SExpr lessThan(SExpr a, SExpr b) throws SMTTranslationException {
-        return new SExpr("<", Type.BOOL, SExprs.coerce(a, IntegerOpHandler.INT),
-            SExprs.coerce(b, IntegerOpHandler.INT));
+        return new SExpr("<", Type.BOOL, SExprs.coerce(a, Type.INT),
+            SExprs.coerce(b, Type.INT));
     }
 
     public static SExpr eq(SExpr a, SExpr b) throws SMTTranslationException {
@@ -335,13 +337,13 @@ public class SExprs {
     }
 
     public static SExpr minus(SExpr a, SExpr b) throws SMTTranslationException {
-        return new SExpr("-", IntegerOpHandler.INT, SExprs.coerce(a, IntegerOpHandler.INT),
-            SExprs.coerce(b, IntegerOpHandler.INT));
+        return new SExpr("-", Type.INT, SExprs.coerce(a, Type.INT),
+            SExprs.coerce(b, Type.INT));
     }
 
     public static SExpr plus(SExpr a, SExpr b) throws SMTTranslationException {
-        return new SExpr("+", IntegerOpHandler.INT, SExprs.coerce(a, IntegerOpHandler.INT),
-            SExprs.coerce(b, IntegerOpHandler.INT));
+        return new SExpr("+", Type.INT, SExprs.coerce(a, Type.INT),
+            SExprs.coerce(b, Type.INT));
     }
 
     public static SExpr ite(SExpr cond, SExpr _then, SExpr _else) throws SMTTranslationException {
