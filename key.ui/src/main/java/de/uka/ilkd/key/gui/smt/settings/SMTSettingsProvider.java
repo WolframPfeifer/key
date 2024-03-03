@@ -115,6 +115,8 @@ public class SMTSettingsProvider extends SettingsPanel implements SettingsProvid
     private final JCheckBox solverSupportCheck;
     private final JCheckBox enableOnLoad;
 
+    private final JCheckBox enableCaching;
+
     private transient ProofIndependentSMTSettings settings;
     private final transient List<SettingsProvider> children = new ArrayList<>();
 
@@ -130,6 +132,7 @@ public class SMTSettingsProvider extends SettingsPanel implements SettingsProvid
         seqBoundField = createSeqBoundField();
         solverSupportCheck = createSolverSupportCheck();
         enableOnLoad = createEnableOnLoad();
+        enableCaching = createEnableCaching();
 
         // Load all available solver types in the system according to SolverTypes.
         // Note that this should happen before creating the NewTranslationOptions, otherwise
@@ -238,6 +241,12 @@ public class SMTSettingsProvider extends SettingsPanel implements SettingsProvid
         return addCheckBox("Enable SMT solvers when loading proofs",
             "", true,
             e -> settings.setEnableOnLoad(enableOnLoad.isSelected()));
+    }
+
+    private JCheckBox createEnableCaching() {
+        return addCheckBox("Enable Caching of SMT Proofs",
+                "", true,
+                e -> settings.setEnableOnLoad(enableCaching.isSelected()));
     }
 
     private JTextField getSaveToFilePanel() {

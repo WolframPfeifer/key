@@ -16,4 +16,5 @@ public interface SolverLauncherListener {
 
     void launcherStarted(Collection<SMTProblem> problems, Collection<SolverType> solverTypes,
             SolverLauncher launcher);
+
 }

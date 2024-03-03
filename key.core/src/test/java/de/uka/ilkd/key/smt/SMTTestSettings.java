@@ -133,6 +133,11 @@ public class SMTTestSettings implements de.uka.ilkd.key.smt.SMTSettings {
     }
 
     @Override
+    public boolean enableCaching() {
+        return false;
+    }
+
+    @Override
     public NewSMTTranslationSettings getNewSettings() {
         return new NewSMTTranslationSettings();
     }

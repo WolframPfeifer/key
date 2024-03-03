@@ -3,14 +3,21 @@
  * SPDX-License-Identifier: GPL-2.0-only */
 package de.uka.ilkd.key.smt;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 import de.uka.ilkd.key.java.Services;
+import de.uka.ilkd.key.settings.ProofIndependentSMTSettings;
 import de.uka.ilkd.key.smt.SMTSolver.ReasonOfInterruption;
 import de.uka.ilkd.key.smt.solvertypes.SolverType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * IN ORDER TO START THE SOLVERS USE THIS CLASS.<br>
@@ -77,6 +84,8 @@ import de.uka.ilkd.key.smt.solvertypes.SolverType;
  */
 
 public class SolverLauncher implements SolverListener {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(SolverLauncher.class);
 
     /* ############### Public Interface #################### */
 
@@ -253,14 +262,74 @@ public class SolverLauncher implements SolverListener {
             SMTSolver solver = solvers.poll();
             Objects.requireNonNull(solver);
 
+            if (settings.enableCaching()) {
+                SMTSolverResult cachedResult = getCachedResult(solver.getType(), solver.getRawSolverInput());
+                if (cachedResult != null) {
+                    if (cachedResult.isValid() == SMTSolverResult.ThreeValuedTruth.VALID) {
+                        solver.interrupt(ReasonOfInterruption.CachedUnsat);
+                    }
+                    else if (cachedResult.isValid() == SMTSolverResult.ThreeValuedTruth.FALSIFIABLE) {
+                        solver.interrupt(ReasonOfInterruption.CachedSat);
+                    } else {
+                        solver.interrupt(ReasonOfInterruption.CachedUnknown);
+                    }
+                    return;
+                }
+            }
+
             SolverTimeout solverTimeout = new SolverTimeout(solver, session);
             timer.schedule(solverTimeout, solver.getTimeout(), PERIOD);
             session.addCurrentlyRunning(solver);
-
-            // This cast is okay since there is only the class
-            // SMTSolverImplementation that implements SMTSolver.
             solver.start(solverTimeout, settings);
         }
+    }
+
+    private SMTSolverResult getCachedResult(SolverType type, String smtProblemString) {
+        SMTSolverResult result = null;
+        if (!ProofIndependentSMTSettings.SMT_RESULT_CACHE.exists()) {
+            return result;
+        }
+        try {
+            BufferedReader reader = new BufferedReader(new FileReader(ProofIndependentSMTSettings.SMT_RESULT_CACHE));
+            String line = reader.readLine();
+            while (line != null) {
+                // TODO remove magic Strings
+                String[] values = line.split(";");
+                if (values[0].equals(type.getName())) {
+                    String file_name = values[1];
+                    File file = new File(ProofIndependentSMTSettings.SMT_DIR, file_name);
+                    BufferedReader inputReader = new BufferedReader(new FileReader(file));
+                    StringBuilder input = new StringBuilder();
+                    String inputLine = inputReader.readLine();
+                    while (inputLine != null) {
+                        input.append(inputLine);
+                        inputLine = inputReader.readLine();
+                    }
+                    if (!input.toString().equals(smtProblemString)) {
+                        continue;
+                    }
+                    result = extractCachedResult(type, values, result);
+                }
+                line = reader.readLine();
+            }
+        } catch (IOException e) {
+            LOGGER.warn("Could not read SMT cache: " + e.getMessage());
+        }
+        return result;
+    }
+
+    private SMTSolverResult extractCachedResult(SolverType type, String[] settings, SMTSolverResult currentResult) {
+        SMTSolverResult.ThreeValuedTruth validity = SMTSolverResult.ThreeValuedTruth.valueOf(settings[2]);
+        if (currentResult == null || currentResult.isValid().compareTo(validity) > 0) {
+            if (validity == SMTSolverResult.ThreeValuedTruth.VALID) {
+                return SMTSolverResult.createValidResult(type.getName());
+            } else if (validity == SMTSolverResult.ThreeValuedTruth.FALSIFIABLE) {
+                return SMTSolverResult.createInvalidResult(type.getName());
+            } else {
+                return SMTSolverResult.createUnknownResult(type.getName());
+            }
+        }
+        return currentResult;
     }
 
     /**
@@ -313,7 +382,7 @@ public class SolverLauncher implements SolverListener {
             try {
                 // start solvers as many as possible
                 fillRunningList(solvers);
-                if (!startNextSolvers(solvers) && !isInterrupted()) {
+                if (session.getCurrentlyRunningCount() > 0 && !startNextSolvers(solvers) && !isInterrupted()) {
                     try {
                         // if there is nothing to do, wait for the next solver
                         // finishing its task.

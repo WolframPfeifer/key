@@ -224,6 +224,11 @@ public class DefaultSMTSettings implements SMTSettings {
     }
 
     @Override
+    public boolean enableCaching() {
+        return piSettings.isCachingEnabled();
+    }
+
+    @Override
     public NewSMTTranslationSettings getNewSettings() {
         return newTranslationSettings;
     }

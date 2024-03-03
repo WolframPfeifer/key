@@ -27,7 +27,7 @@ public interface SMTSolver {
      * Possible reasons for why a solver process was interrupted/stopped.
      */
     enum ReasonOfInterruption {
-        User, Timeout, Exception, NoInterruption
+        User, Timeout, Exception, NoInterruption, CachedSat, CachedUnsat, CachedUnknown
     }
 
     /**

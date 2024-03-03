@@ -4,13 +4,11 @@
 package de.uka.ilkd.key.gui.smt;
 
 import java.awt.Color;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.Timer;
 import javax.swing.*;
@@ -30,20 +28,24 @@ import de.uka.ilkd.key.proof.Goal;
 import de.uka.ilkd.key.proof.Node;
 import de.uka.ilkd.key.proof.Proof;
 import de.uka.ilkd.key.settings.DefaultSMTSettings;
+import de.uka.ilkd.key.settings.PathConfig;
 import de.uka.ilkd.key.settings.ProofIndependentSMTSettings;
-import de.uka.ilkd.key.smt.SMTFocusResults;
-import de.uka.ilkd.key.smt.SMTProblem;
-import de.uka.ilkd.key.smt.SMTSolver;
+import de.uka.ilkd.key.settings.ProofSettings;
+import de.uka.ilkd.key.smt.*;
 import de.uka.ilkd.key.smt.SMTSolver.ReasonOfInterruption;
 import de.uka.ilkd.key.smt.SMTSolver.SolverState;
 import de.uka.ilkd.key.smt.SMTSolverResult.ThreeValuedTruth;
-import de.uka.ilkd.key.smt.SolverLauncher;
-import de.uka.ilkd.key.smt.SolverLauncherListener;
 import de.uka.ilkd.key.smt.solvertypes.SolverType;
 import de.uka.ilkd.key.smt.solvertypes.SolverTypes;
 import de.uka.ilkd.key.taclettranslation.assumptions.TacletSetTranslation;
+import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SolverListener implements SolverLauncherListener {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(SolverListener.class);
+
     private ProgressDialog progressDialog;
     private ProgressModel progressModel;
     // Every intern SMT problem refers to one solver
@@ -291,7 +293,8 @@ public class SolverListener implements SolverLauncherListener {
         for (SMTProblem problem : smtproblems) {
             y = 0;
             for (SMTSolver solver : problem.getSolvers()) {
-                this.problems.add(new InternSMTProblem(x, y, problem, solver));
+                InternSMTProblem internProblem = new InternSMTProblem(x, y, problem, solver);
+                this.problems.add(internProblem);
                 y++;
             }
             x++;
@@ -308,7 +311,6 @@ public class SolverListener implements SolverLauncherListener {
         SwingUtilities.invokeLater(() -> progressDialog.setVisible(true));
 
     }
-
 
     private InternSMTProblem getProblem(int col, int row) {
         for (InternSMTProblem problem : problems) {
@@ -356,7 +358,7 @@ public class SolverListener implements SolverLauncherListener {
     }
 
     private void refreshDialog() {
-        for (InternSMTProblem problem : problems) {
+        for (InternSMTProblem problem : problems.stream().filter(p -> !p.stopped).toList()) {
             refreshProgessOfProblem(problem);
         }
     }
@@ -425,6 +427,9 @@ public class SolverListener implements SolverLauncherListener {
     private void stopped(InternSMTProblem problem) {
         problem.stopTime();
 
+        problem.stopped = true;
+        problem.running = false;
+
         int x = problem.getSolverIndex();
         int y = problem.getProblemIndex();
 
@@ -450,6 +455,61 @@ public class SolverListener implements SolverLauncherListener {
             unknownStopped(x, y);
         }
 
+        if (settings.enableCaching()) {
+            cacheSMT(problem.solver);
+        }
+
+    }
+
+    /**
+     * Caches an SMT result by a given solver.
+     * @param solver the solver whose result is to be cached
+     */
+    private void cacheSMT(SMTSolver solver) {
+        // Create SMT cache folder in the .key directory
+        if (!ProofIndependentSMTSettings.SMT_DIR.exists()) {
+            ProofIndependentSMTSettings.SMT_DIR.mkdirs();
+        }
+        // Create unique cache file in the SMT cache folder, named "goal<counter>.smt2"
+        String file_name = (solver.getProblem().getName() + ".smt2").replace(" ", "");
+        int counter = 0;
+        File file = new File(ProofIndependentSMTSettings.SMT_DIR, file_name);
+        // While a file with the created name already exists, increase the counter in the file name
+        while (file.exists()) {
+            counter++;
+            file_name = (solver.getProblem().getName() + "_" + counter + ".smt2").replace(" ", "");
+            file = new File(ProofIndependentSMTSettings.SMT_DIR, file_name);
+        }
+        // Write SMT input to unique cached file
+        try {
+            Writer out = new BufferedWriter(new FileWriter(file, StandardCharsets.UTF_8));
+            out.write(solver.getRawSolverInput());
+        } catch (IOException e) {
+            LOGGER.warn("Could not cache SMT input: ", e);
+        }
+        // Create SMT cache result file in the SMT cache folder
+        if (!ProofIndependentSMTSettings.SMT_RESULT_CACHE.exists()) {
+            try {
+                ProofIndependentSMTSettings.SMT_RESULT_CACHE.getParentFile().mkdirs();
+                ProofIndependentSMTSettings.SMT_RESULT_CACHE.createNewFile();
+            } catch (IOException e) {
+                LOGGER.warn("Could not create SMT result cache: " + e.getMessage());
+            }
+        }
+        // Write SMT result to SMT result file
+        try {
+            Writer out = new BufferedWriter(
+                    new FileWriter(ProofIndependentSMTSettings.SMT_RESULT_CACHE, StandardCharsets.UTF_8, true));
+            out.append(solver.getType().getName())
+                    .append(";")
+                    .append(file_name)
+                    .append(";")
+                    .append(solver.getFinalResult().isValid().name())
+                    .append("\n");
+            out.close();
+        } catch (IOException e) {
+            LOGGER.warn("Could not cache SMT result: ", e);
+        }
     }
 
     private void interrupted(InternSMTProblem problem) {
@@ -468,6 +528,9 @@ public class SolverListener implements SolverLauncherListener {
             progressModel.setText("Timeout.", x, y);
         }
         case User -> progressModel.setText("Interrupted by user.", x, y);
+        case CachedUnknown -> unknownStopped(x, y);
+        case CachedSat -> unsuccessfullyStopped(problem, x, y);
+        case CachedUnsat -> successfullyStopped(problem, x, y);
         }
     }
 

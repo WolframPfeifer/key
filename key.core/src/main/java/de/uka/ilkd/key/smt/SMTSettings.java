@@ -129,5 +129,7 @@ public interface SMTSettings {
 
     boolean invarianForall();
 
+    boolean enableCaching();
+
     NewSMTTranslationSettings getNewSettings();
 }

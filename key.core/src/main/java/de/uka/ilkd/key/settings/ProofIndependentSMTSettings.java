@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: GPL-2.0-only */
 package de.uka.ilkd.key.settings;
 
+import java.io.File;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.Optional;
@@ -15,6 +16,13 @@ import de.uka.ilkd.key.smt.solvertypes.SolverTypes;
 import static de.uka.ilkd.key.settings.FeatureSettings.createFeature;
 
 public final class ProofIndependentSMTSettings extends AbstractSettings {
+
+    public static final File SMT_DIR =
+            new File(PathConfig.getKeyConfigDir(), "smt_cache");
+
+    public static final File SMT_RESULT_CACHE =
+            new File(SMT_DIR, "smt_result_cache.txt");
+
     private static final String CATEGORY = "SMTSettings";
     public static final String ACTIVE_SOLVER = "ActiveSolver";
     public static final String KEY_TIMEOUT = "SolverTimeout";
@@ -39,6 +47,8 @@ public final class ProofIndependentSMTSettings extends AbstractSettings {
     public static final String PROP_TIMEOUT = "timeout";
     public static final String SOLVER_CHECK_FOR_SUPPORT = "checkForSupport";
     public static final String SOLVER_ENABLED_ON_LOAD = "enableWhenLoading";
+
+    public static final String SOLVER_CACHING_ENABLED = "enableSMTCaching";
 
     private static final ProofIndependentSMTSettings DEFAULT_DATA =
         new ProofIndependentSMTSettings();
@@ -81,6 +91,8 @@ public final class ProofIndependentSMTSettings extends AbstractSettings {
 
     private boolean checkForSupport = true;
     private boolean enableOnLoad = true;
+
+    private boolean enableCaching = true;
 
     private ProofIndependentSMTSettings(ProofIndependentSMTSettings data) {
         copy(data);
@@ -287,6 +299,14 @@ public final class ProofIndependentSMTSettings extends AbstractSettings {
         this.enableOnLoad = enableOnLoad;
     }
 
+    public boolean isCachingEnabled() {
+        return enableCaching;
+    }
+
+    public void setEnableCaching(boolean enableCaching) {
+        this.enableCaching = enableCaching;
+    }
+
     public void copy(ProofIndependentSMTSettings data) {
         setShowResultsAfterExecution(data.showResultsAfterExecution);
         setStoreSMTTranslationToFile(data.storeSMTTranslationToFile);
@@ -303,6 +323,7 @@ public final class ProofIndependentSMTSettings extends AbstractSettings {
         setLocsetBound(data.locsetBound);
         setObjectBound(data.objectBound);
         setEnableOnLoad(data.enableOnLoad);
+        setEnableCaching(data.enableCaching);
 
 
         solverTypes.addAll(data.solverTypes);
@@ -370,6 +391,7 @@ public final class ProofIndependentSMTSettings extends AbstractSettings {
         locsetBound = SettingsConverter.read(props, prefix + LOCSET_BOUND, locsetBound);
         objectBound = SettingsConverter.read(props, prefix + OBJECT_BOUND, objectBound);
         enableOnLoad = SettingsConverter.read(props, SOLVER_ENABLED_ON_LOAD, enableOnLoad);
+        enableCaching = SettingsConverter.read(props, SOLVER_CACHING_ENABLED, enableCaching);
 
 
         for (SolverType type : solverTypes) {
@@ -401,6 +423,7 @@ public final class ProofIndependentSMTSettings extends AbstractSettings {
         SettingsConverter.store(props, prefix + FIELD_BOUND, seqBound);
         SettingsConverter.store(props, prefix + LOCSET_BOUND, locsetBound);
         SettingsConverter.store(props, prefix + SOLVER_ENABLED_ON_LOAD, enableOnLoad);
+        SettingsConverter.store(props, prefix + SOLVER_CACHING_ENABLED, enableCaching);
 
         for (SolverType type : solverTypes) {
             SettingsConverter.store(props, prefix + PROP_TIMEOUT + type.getName(),
