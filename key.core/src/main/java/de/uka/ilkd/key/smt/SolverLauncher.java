@@ -273,7 +273,7 @@ public class SolverLauncher implements SolverListener {
                     } else {
                         solver.interrupt(ReasonOfInterruption.CachedUnknown);
                     }
-                    return;
+                    continue;
                 }
             }
 
@@ -289,8 +289,7 @@ public class SolverLauncher implements SolverListener {
         if (!ProofIndependentSMTSettings.SMT_RESULT_CACHE.exists()) {
             return result;
         }
-        try {
-            BufferedReader reader = new BufferedReader(new FileReader(ProofIndependentSMTSettings.SMT_RESULT_CACHE));
+        try (BufferedReader reader = new BufferedReader(new FileReader(ProofIndependentSMTSettings.SMT_RESULT_CACHE))) {
             String line = reader.readLine();
             while (line != null) {
                 // TODO remove magic Strings
@@ -298,17 +297,18 @@ public class SolverLauncher implements SolverListener {
                 if (values[0].equals(type.getName())) {
                     String file_name = values[1];
                     File file = new File(ProofIndependentSMTSettings.SMT_DIR, file_name);
-                    BufferedReader inputReader = new BufferedReader(new FileReader(file));
-                    StringBuilder input = new StringBuilder();
-                    String inputLine = inputReader.readLine();
-                    while (inputLine != null) {
-                        input.append(inputLine);
-                        inputLine = inputReader.readLine();
+                    try (BufferedReader inputReader = new BufferedReader(new FileReader(file))) {
+                        StringBuilder input = new StringBuilder();
+                        String inputLine = inputReader.readLine();
+                        while (inputLine != null) {
+                            input.append(inputLine);
+                            inputLine = inputReader.readLine();
+                        }
+                        if (!input.toString().equals(smtProblemString)) {
+                            continue;
+                        }
+                        result = extractCachedResult(type, values, result);
                     }
-                    if (!input.toString().equals(smtProblemString)) {
-                        continue;
-                    }
-                    result = extractCachedResult(type, values, result);
                 }
                 line = reader.readLine();
             }

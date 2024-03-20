@@ -455,7 +455,8 @@ public class SolverListener implements SolverLauncherListener {
             unknownStopped(x, y);
         }
 
-        if (settings.enableCaching()) {
+        var reason = problem.getSolver().getReasonOfInterruption();
+        if (settings.enableCaching() && !(reason == ReasonOfInterruption.CachedSat || reason == ReasonOfInterruption.CachedUnknown || reason == ReasonOfInterruption.CachedUnsat)) {
             cacheSMT(problem.solver);
         }
 
@@ -481,8 +482,7 @@ public class SolverListener implements SolverLauncherListener {
             file = new File(ProofIndependentSMTSettings.SMT_DIR, file_name);
         }
         // Write SMT input to unique cached file
-        try {
-            Writer out = new BufferedWriter(new FileWriter(file, StandardCharsets.UTF_8));
+        try (Writer out = new BufferedWriter(new FileWriter(file, StandardCharsets.UTF_8))) {
             out.write(solver.getRawSolverInput());
         } catch (IOException e) {
             LOGGER.warn("Could not cache SMT input: ", e);
@@ -497,16 +497,15 @@ public class SolverListener implements SolverLauncherListener {
             }
         }
         // Write SMT result to SMT result file
-        try {
-            Writer out = new BufferedWriter(
-                    new FileWriter(ProofIndependentSMTSettings.SMT_RESULT_CACHE, StandardCharsets.UTF_8, true));
+        try (Writer out = new BufferedWriter(
+            new FileWriter(ProofIndependentSMTSettings.SMT_RESULT_CACHE, StandardCharsets.UTF_8, true))) {
+
             out.append(solver.getType().getName())
                     .append(";")
                     .append(file_name)
                     .append(";")
                     .append(solver.getFinalResult().isValid().name())
                     .append("\n");
-            out.close();
         } catch (IOException e) {
             LOGGER.warn("Could not cache SMT result: ", e);
         }
